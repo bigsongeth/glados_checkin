@@ -81,6 +81,28 @@ const notify = async (notice) => {
             }
           }),
         })
+      } else if (option.startsWith('feishu:')) {
+        const feishuWebhookUrl = option.split(':').slice(1).join(':')
+        await fetch(feishuWebhookUrl, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            msg_type: 'post',
+            content: {
+              post: {
+                zh_cn: {
+                  title: notice[0],
+                  content: [
+                    notice.map((line) => ({
+                      tag: 'text',
+                      text: line
+                    }))
+                  ]
+                }
+              }
+            }
+          }),
+        })
       } else {
         // fallback
         await fetch(`https://www.pushplus.plus/send`, {
