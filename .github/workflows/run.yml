@@ -6,16 +6,25 @@ on:
   schedule:
     - cron: 10 16 * * *
 
+permissions:
+  actions: write
+  contents: write
+
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
       - run: npm ci
       - run: npm run main
         env:
           GLADOS: ${{ secrets.GLADOS }}
-          NOTIFY: ${{ secrets.NOTIFY }}
+          # 在原有推送渠道之外追加 console: ，让签到结果同时打进 Actions 日志
+          NOTIFY: |
+            ${{ secrets.NOTIFY }}
+            console:
+      # 仓库 60 天无 push 时 GitHub 会停掉 cron；这一步用 API 定期续命
+      - uses: gautamkrishnar/keepalive-workflow@v2
