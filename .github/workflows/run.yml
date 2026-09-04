@@ -2,12 +2,17 @@ name: run
 
 on:
   workflow_dispatch:
+    inputs:
+      keepalive_days:
+        description: 距上次提交超过多少天就做一次空提交（手动测试可填 0）
+        default: "50"
   push:
   schedule:
     - cron: 10 16 * * *
 
 permissions:
   actions: write
+  contents: write
 
 jobs:
   run:
@@ -25,10 +30,29 @@ jobs:
           NOTIFY: |
             ${{ secrets.NOTIFY }}
             console:
-      # 仓库 60 天无 push 时 GitHub 会停掉 cron；每次跑完都调一次 enable API 续命
-      # （第三方 keepalive action 已被 GitHub 封，故用内置 gh 直接调）
-      - name: keepalive
+      # 仓库 60 天无 push 时 GitHub 会停掉 cron。双保险：
+      # ① 每次跑完调 enable API 续命（第三方 keepalive action 已被 GitHub 封，故用内置 gh）
+      - name: keepalive-api
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/run.yml/enable" && echo "keepalive OK"
+      # ② 距上次提交 ≥ N 天（默认 50）就推一个空提交，这是 GitHub 官方认可的"活跃度"
+      #    用 GITHUB_TOKEN 推送不会再触发 push 事件，不会死循环
+      - name: keepalive-commit
+        if: always()
+        env:
+          THRESHOLD: ${{ github.event.inputs.keepalive_days || '50' }}
+        run: |
+          last=$(git log -1 --format=%ct)
+          age=$(( ($(date +%s) - last) / 86400 ))
+          echo "距上次提交 ${age} 天，阈值 ${THRESHOLD} 天"
+          if [ "$age" -ge "$THRESHOLD" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keepalive $(date -u +%F)"
+            git push
+            echo "keepalive commit pushed"
+          else
+            echo "未到阈值，跳过"
+          fi
