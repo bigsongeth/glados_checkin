@@ -8,7 +8,6 @@ on:
 
 permissions:
   actions: write
-  contents: write
 
 jobs:
   run:
@@ -26,5 +25,10 @@ jobs:
           NOTIFY: |
             ${{ secrets.NOTIFY }}
             console:
-      # 仓库 60 天无 push 时 GitHub 会停掉 cron；这一步用 API 定期续命
-      - uses: gautamkrishnar/keepalive-workflow@v2
+      # 仓库 60 天无 push 时 GitHub 会停掉 cron；每次跑完都调一次 enable API 续命
+      # （第三方 keepalive action 已被 GitHub 封，故用内置 gh 直接调）
+      - name: keepalive
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/run.yml/enable" && echo "keepalive OK"
