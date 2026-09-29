@@ -26,6 +26,7 @@ jobs:
       - run: npm run main
         env:
           GLADOS: ${{ secrets.GLADOS }}
+          GLADOS_UA: ${{ secrets.GLADOS_UA }}
           # 在原有推送渠道之外追加 console: ，让签到结果同时打进 Actions 日志
           NOTIFY: |
             ${{ secrets.NOTIFY }}

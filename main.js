@@ -7,14 +7,15 @@ const glados = async () => {
       const common = {
         'cookie': cookie,
         'referer': 'https://glados.cloud/console/checkin',
-        'user-agent': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)',
+        // 2026-09-24 起 GLaDOS 把签到绑定到登录时的浏览器：UA 必须和取 cookie 的浏览器一致
+        'user-agent': process.env.GLADOS_UA || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
       }
       const action = await fetch('https://glados.cloud/api/user/checkin', {
         method: 'POST',
         headers: { ...common, 'content-type': 'application/json' },
         body: '{"token":"glados.cloud"}',
       }).then((r) => r.json())
-      if (action?.code) throw new Error(action?.message)
+      if (action?.code) throw new Error(`${action?.message} (code=${action?.code}${action?.reason ? ', reason=' + action.reason : ''})`)
       const status = await fetch('https://glados.cloud/api/user/status', {
         method: 'GET',
         headers: { ...common },
